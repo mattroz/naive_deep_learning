@@ -1,13 +1,15 @@
 '''Implementation of various ResNet architectures (https://arxiv.org/abs/1512.03385)'''
 
 import keras
-from keras.layers import Input, BatchNormalization, Conv2D, Activation, Dense
+import tensorflow as tf
+from keras.layers import Input, BatchNormalization, Conv2D, Activation, Dense, Flatten
 from keras.models import Model
 
 
 class StraightResNet18(object):
     def __init__(self, input_shape):
         self.input_shape = input_shape
+        self.model = None
 
     def build(self):
         """Build whole ResNet18 net"""
@@ -70,7 +72,32 @@ class StraightResNet18(object):
         self.act8 = Activation('relu', name='act8')(self.bn8)
         self.conv8 = Conv2D(filters=512, kernel_size=3, strides=1,
                             kernel_initializer='he_normal', name='conv8')(self.act8)
-
-        self.out = Dense(units=1000, name='FC1000')(self.conv8)
+        self.flat = Flatten()(self.conv8)
+        self.out = Dense(units=1000, name='FC1000')(self.flat)
 
         self.model = Model(inputs=self.input, outputs=self.out)
+
+
+    def visualize_model(self):
+        """Create tensorflow graph representation of ResNet model"""
+
+        graph = tf.Graph()
+
+        with graph.as_default():
+            self.build()
+            # compile method actually creates the model in the graph.
+            self.model.compile(loss='categorical_crossentropy',
+                               optimizer='adam', metrics=['accuracy'])
+        writer = tf.summary.FileWriter(logdir='vis', graph=graph)
+        writer.flush()
+
+        return
+
+
+def main():
+    resnet = StraightResNet18((300,300))
+    resnet.build()
+    resnet.visualize_model()
+
+if __name__ == '__main__':
+    main()
